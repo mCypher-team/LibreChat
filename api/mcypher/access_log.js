@@ -1,5 +1,5 @@
 const axios = require('axios');
-// const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 
 class AccessLog {
@@ -43,13 +43,13 @@ class AccessLog {
     console.log("[AccessLog] Sending logs to server...", this.logs.map(log => log.type));
     const url = 'https://53rxlci0ya.execute-api.ap-northeast-2.amazonaws.com/logs';
 
-    const uuid = this.generateRandomString(20);
+    const uuid = crypto.randomUUID();
     const payload = {
       log: this.logs.map(log => {
         const { loggedAt, type, ...payload } = log;
 
         return {
-          id: "ID",
+          id: crypto.randomUUID(),
           loggedAt: log.loggedAt,
           sessionId: uuid,
           email: this.email,
