@@ -49,7 +49,7 @@ class AccessLog {
         const { loggedAt, type, ...payload } = log;
 
         return {
-          id: crypto.randomUUID(),
+          id: "ID",
           loggedAt: log.loggedAt,
           sessionId: uuid,
           email: this.email,
