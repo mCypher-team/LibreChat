@@ -13,6 +13,8 @@ const AgentController = require('~/server/controllers/agents/request');
 const addTitle = require('~/server/services/Endpoints/agents/title');
 const { getRoleByName } = require('~/models/Role');
 
+const { logger } = require('@librechat/data-schemas');
+
 const router = express.Router();
 
 router.use(moderateText);
@@ -30,6 +32,7 @@ router.use(buildEndpointOption);
 router.use(setHeaders);
 
 const controller = async (req, res, next) => {
+  logger.info("[ChatController] Request received:");
   await AgentController(req, res, next, initializeClient, addTitle);
 };
 

@@ -35,6 +35,10 @@ if (isEnabled(LIMIT_MESSAGE_USER)) {
 }
 
 chatRouter.use('/', chat);
+
+const { logger } = require('@librechat/data-schemas');
+
+logger.info('Agents routes initialized');
 router.use('/chat', chatRouter);
 
 module.exports = router;

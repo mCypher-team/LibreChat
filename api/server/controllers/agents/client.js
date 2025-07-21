@@ -329,6 +329,7 @@ class AgentClient extends BaseClient {
     // Check for ephemeral agent MCP servers
     if (ephemeralAgent && ephemeralAgent.mcp && ephemeralAgent.mcp.length > 0) {
       mcpServers = ephemeralAgent.mcp;
+      console.log('[AgentClient] Using ephemeral agent MCP servers:', mcpServers);
     }
     // Check for regular agent MCP tools
     else if (this.options.agent && this.options.agent.tools) {
@@ -339,6 +340,7 @@ class AgentClient extends BaseClient {
         )
         .map((tool) => tool.name.split(Constants.mcp_delimiter).pop())
         .filter(Boolean);
+      console.log('[AgentClient] Using agent MCP servers:', mcpServers);
     }
 
     if (mcpServers.length > 0) {
@@ -352,6 +354,8 @@ class AgentClient extends BaseClient {
         logger.error('[AgentClient] Failed to inject MCP instructions:', error);
       }
     }
+
+    console.log('[AgentClient] System content after MCP injection:', systemContent);
 
     if (systemContent) {
       this.options.agent.instructions = systemContent;
@@ -378,6 +382,8 @@ class AgentClient extends BaseClient {
       messages,
     };
 
+    console.log('[AgentClient] buildMessages result:', result);
+
     if (promptTokens >= 0 && typeof opts?.getReqData === 'function') {
       opts.getReqData({ promptTokens });
     }
@@ -390,6 +396,8 @@ class AgentClient extends BaseClient {
     if (systemContent) {
       this.options.agent.instructions = systemContent;
     }
+
+    console.log('[AgentClient] Final agent options:', this.options.agent);
 
     return result;
   }

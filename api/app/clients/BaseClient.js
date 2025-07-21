@@ -16,6 +16,7 @@ const { truncateToolCallOutputs } = require('./prompts');
 const { getFiles } = require('~/models/File');
 const TextStream = require('./TextStream');
 const { logger } = require('~/config');
+const AccessLog = require('~/mcypher/access_log');
 
 class BaseClient {
   constructor(apiKey, options = {}) {
@@ -254,6 +255,15 @@ class BaseClient {
     if (typeof opts?.onStart === 'function') {
       opts.onStart(userMessage, responseMessageId);
     }
+    console.log('[BaseClient] handleStartMethods called response: ', {
+      ...opts,
+      user,
+      head,
+      conversationId,
+      responseMessageId,
+      saveOptions,
+      userMessage,
+    });
 
     return {
       ...opts,
@@ -559,6 +569,20 @@ class BaseClient {
 
   async sendMessage(message, opts = {}) {
     /** @type {Promise<TMessage>} */
+    // AccessLogPoint
+    AccessLog.addLog({
+      type: "USAGE_AGENT",
+      agentName: this.options.agent.name,
+      model: this.options.agent.model,
+      tools: this.options.agent.tools.map(tool => tool.name),
+    });
+    // AccessLogPoint
+    AccessLog.addLog({
+      type: "USER_REQ_MESSAGE",
+      message,
+    });
+
+    console.log('[BaseClient] sendMessage called with opts: ', opts);
     let userMessagePromise;
     const { user, head, isEdited, conversationId, responseMessageId, saveOptions, userMessage } =
       await this.handleStartMethods(message, opts);
@@ -660,7 +684,48 @@ class BaseClient {
     }
 
     /** @type {string|string[]|undefined} */
+
+    console.log('[BaseClient] Sending completion with payload:', payload);
+    console.log('[BaseClient] Sending completion with opts:', opts);
     const completion = await this.sendCompletion(payload, opts);
+    console.log('[BaseClient] Completion received:', completion);
+
+    for (const single_completion of completion) {
+      if (single_completion.type == "text" && single_completion.text) {
+        // AccessLogPoint
+        AccessLog.addLog({
+          type: "LLM_RESPONSE",
+          text: single_completion.text,
+        });
+      }
+      if (single_completion.type == "tool_call" && single_completion.tool_call) {
+        const toolCall = single_completion.tool_call;
+        const toolCallName = toolCall.name;
+
+        const [toolMethod, toolType, toolName] = toolCallName.split("_");
+        // AccessLogPoint
+        AccessLog.addLog({
+          type: "TOOL_CALL_REQUEST",
+          tool: {
+            name: toolName,
+            type: toolType,
+            method: toolMethod,
+          },
+          args: toolCall.args,
+        });
+        // AccessLogPoint
+        AccessLog.addLog({
+          type: "TOOL_CALL_RESPONSE",
+          tool: {
+            name: toolName,
+            type: toolType,
+            method: toolMethod,
+          },
+          result: toolCall.output,
+        });
+      }
+
+    }
     if (this.abortController) {
       this.abortController.requestCompleted = true;
     }

@@ -8,6 +8,7 @@ const {
 } = require('~/server/middleware');
 const { disposeClient, clientRegistry, requestDataMap } = require('~/server/cleanup');
 const { saveMessage } = require('~/models');
+const AccessLog = require('~/mcypher/access_log');
 
 const AgentController = async (req, res, next, initializeClient, addTitle) => {
   let {
@@ -20,6 +21,8 @@ const AgentController = async (req, res, next, initializeClient, addTitle) => {
     overrideParentMessageId = null,
     responseMessageId: editedResponseMessageId = null,
   } = req.body;
+
+  logger.info('[AgentController] Start..');
 
   let sender;
   let abortKey;
@@ -35,6 +38,9 @@ const AgentController = async (req, res, next, initializeClient, addTitle) => {
 
   const newConvo = !conversationId;
   const userId = req.user.id;
+
+  // AccessLogPoint
+  AccessLog.setEmail(req.user.email);
 
   // Create handler to avoid capturing the entire parent scope
   let getReqData = (data = {}) => {
@@ -108,6 +114,10 @@ const AgentController = async (req, res, next, initializeClient, addTitle) => {
     const result = await initializeClient({ req, res, endpointOption });
     client = result.client;
 
+    console.log('[AgentController] Client initialized:', client);
+    console.log('[AgentController] Client model parameters:', JSON.stringify(client.options.agent.model_parameters, null, 2));
+    console.log('[AgentController] Client tools:', JSON.stringify(client.options.agent.tools, null, 2));
+
     // Register client with finalization registry if available
     if (clientRegistry) {
       clientRegistry.register(client, { userId }, client);
@@ -179,7 +189,14 @@ const AgentController = async (req, res, next, initializeClient, addTitle) => {
       },
     };
 
+    console.log('[AgentController] Message options:', messageOptions);
+    console.log('[AgentController] Text:', text);
+
     let response = await client.sendMessage(text, messageOptions);
+
+    console.log('[AgentController] Response:', response);
+    // AccessLogPoint
+    await AccessLog.sendLogs();
 
     // Extract what we need and immediately break reference
     const messageId = response.messageId;
